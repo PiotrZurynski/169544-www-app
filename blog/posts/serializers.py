@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Category, Topic, Post
+from django.utils import timezone
 
 class CategorySerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
@@ -27,7 +28,11 @@ class TopicModelSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'category','created']
         read_only_fields = ['id', 'created']
 
-class PostModelSerializer(serializers.ModelSerializer): 
+class PostModelSerializer(serializers.ModelSerializer):
+    topic_name=serializers.CharField(source='topic.name',read_only=True)
+    category_name=serializers.CharField(source='topic.category.name',read_only=True)
+    created_by_username=serializers.CharField(source='created_by.username',read_only=True)
+
     class Meta:
         model = Post
         fields = [
@@ -43,6 +48,18 @@ class PostModelSerializer(serializers.ModelSerializer):
             'created_at', 
             'updated_at'
         ]
-        read_only_fields=['id','created_at','updated_at','created_by']
+        read_only_fields=['id','updated_at','created_by','topic_name','category_name','created_by_username']
 
+        def validate_title(self,value):
+            if not value.replace(' ','').isalpha():
+                raise serializers.ValidationError(
+                    "Pole może zawierać tylko litery"
+                )
+            return value
         
+        def validate_created_at(self,value):
+            if value and value > timezone.now():
+                raise serializers.ValidationError(
+                    "Data dodania nie może być z przyszłości"
+                )
+            return value
