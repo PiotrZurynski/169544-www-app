@@ -8,6 +8,8 @@ from rest_framework.decorators import api_view,permission_classes,authentication
 from rest_framework.permissions import AllowAny
 from .serializers import CategorySerializer,TopicModelSerializer,PostModelSerializer
 User=get_user_model()
+from rest_framework.views import APIView
+from django.db import IntegrityError
 
 @api_view(['GET','POST'])
 def category_list(request):
@@ -106,56 +108,62 @@ def topic_search(request):
     serializer=TopicModelSerializer(topics, many=True)
     return Response(serializer.data)
 
+class PostList(APIView):
+    permission_classes=[AllowAny]
+    authentication_classes=[]
 
-@api_view(['GET','POST'])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def post_list(request):
-    if request.method=='GET':
-        posts=Post.objects.all()
-        serializer=PostModelSerializer(posts,many=True)
-        return Response(serializer.data)
-    serializer=PostModelSerializer(data=request.data)
-    if serializer.is_valid():
-        if request.user.is_authenticated:
-            user=request.user
-        else:
-            user=User.objects.first()
-            if not user:
-                return Response({"error":"Brak użytkownika w bazie. Użyj createsuperuser lub zmień model, by created_by było null=True."},status=status.HTTP_400_BAD_REQUEST)
-        serializer.save(created_by=user)
-        return Response(serializer.data,status=status.HTTP_201_CREATED)
-    return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    def get(self,request):
+        qs=Post.objects.all()
+        ser=PostModelSerializer(qs,many=True)
+        return Response(ser.data)
 
+    def post(self,request):
+        ser=PostModelSerializer(data=request.data)
+        if not ser.is_valid():
+            return Response(ser.errors,status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if request.user and request.user.is_authenticated:
+                ser.save(created_by=request.user)
+            else:
+                try:
+                    ser.save()
+                except IntegrityError:
+                    user=User.objects.first()
+                    if not user:
+                        return Response({"detail":"Brak użytkownika w bazie, a created_by nie jest nullable."},status=400)
+                    ser.save(created_by=user)
+        except Exception as e:
+            return Response({"detail":str(e)},status=400)
+        return Response(ser.data,status=status.HTTP_201_CREATED)
 
-@api_view(['GET','PUT','DELETE'])
-def post_detail(request, pk):
-    try:
-        post=Post.objects.get(pk=pk)
-    except Post.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    
-    if request.method=='GET':
-        serializer=PostModelSerializer(post)
-        return Response(serializer.data)
-    
-    elif request.method=='PUT':
-        serializer=PostModelSerializer(post, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    elif request.method=='DELETE':
-        post.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-@api_view(['GET'])
-def post_search(request):
-    search_query=request.query_params.get('title', '')
-    if search_query:
-        posts=Post.objects.filter(title__icontains=search_query)
-    else:
-        posts=Post.objects.all()
-    
-    serializer=PostModelSerializer(posts, many=True)
-    return Response(serializer.data)
+class PostDetail(APIView):
+    permission_classes=[AllowAny]
+    authentication_classes=[]
+
+    def get(self,request,pk):
+        obj=get_object_or_404(Post,pk=pk)
+        ser=PostModelSerializer(obj)
+        return Response(ser.data)
+
+    def put(self,request,pk):
+        obj=get_object_or_404(Post,pk=pk)
+        ser=PostModelSerializer(obj,data=request.data)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors,status=400)
+
+    def delete(self,request,pk):
+        obj=get_object_or_404(Post,pk=pk)
+        obj.delete()
+        return Response(status=204)
+
+class PostSearch(APIView):
+    permission_classes=[AllowAny]
+    authentication_classes=[]
+
+    def get(self,request):
+        q=request.query_params.get('title','')
+        qs=Post.objects.filter(title__icontains=q) if q else Post.objects.all()
+        ser=PostModelSerializer(qs,many=True)
+        return Response(ser.data)

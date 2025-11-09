@@ -1,5 +1,6 @@
 from django.urls import path
 from . import api_views as views
+from .api_views import PostList,PostDetail,PostSearch
 
 urlpatterns = [
     path('categories/', views.category_list, name='category-list'),
@@ -8,7 +9,7 @@ urlpatterns = [
     path('topics/', views.topic_list, name='topic-list'),
     path('topics/<int:pk>/', views.topic_detail, name='topic-detail'),
     path('topics/search/', views.topic_search, name='topic-search'),
-    path('posts/', views.post_list, name='post-list'),
-    path('posts/<int:pk>/', views.post_detail, name='post-detail'),
-    path('posts/search/',views.post_search,name='post-search'),
+    path('posts/', PostList.as_view(), name='post-list'),
+    path('posts/<int:pk>/', PostDetail.as_view(), name='post-detail'),
+    path('posts/search/',PostSearch.as_view(),name='post-search'),
 ]
