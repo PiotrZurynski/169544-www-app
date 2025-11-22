@@ -124,6 +124,7 @@ USE_TZ = True
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'posts.permissions.CustomDjangoModelPermissions', 
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
