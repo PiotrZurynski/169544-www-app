@@ -42,9 +42,12 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'posts',
     'rest_framework.authtoken',
+    'graphene_django',
     
 ]
-
+GRAPHENE={
+    "SCHEMA":"blog.schema.schema"
+}
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

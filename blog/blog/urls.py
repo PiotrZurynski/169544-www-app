@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import include, path
 from debug_toolbar.toolbar import debug_toolbar_urls
 from rest_framework.authtoken.views import obtain_auth_token
+from graphene_django.views import GraphQLView
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,5 +27,6 @@ urlpatterns = [
     path('__debug__/',include('debug_toolbar.urls')),
     path('api/',include('posts.urls')),
     path('api-token-auth/',obtain_auth_token,name='api_token_auth'),
+    path('graphql/',csrf_exempt(GraphQLView.as_view(graphiql=True))),
     
 ] + debug_toolbar_urls()
